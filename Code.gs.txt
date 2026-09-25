@@ -1,0 +1,154 @@
+function doGet(e) {
+  return HtmlService.createHtmlOutputFromFile('Index')
+    .setTitle('Laporan Sarapan HaaNSiRO')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+function getMenuData() {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("Master Menu");
+    
+    // Auto-create Master Menu sheet with headers if missing
+    if (!sheet) {
+      sheet = ss.insertSheet("Master Menu");
+      sheet.appendRow(["Nama Menu", "Harga"]);
+      sheet.getRange(1, 1, 1, 2).setFontWeight("bold").setBackground("#cfe2f3");
+      sheet.appendRow(["Nasi Goreng Spesial HaaNSiRO", 15000]);
+      sheet.appendRow(["Lontong Sayur SakMbledos", 12000]);
+      sheet.appendRow(["Es Teh Manis Mantap", 4000]);
+      sheet.appendRow(["Kopi Hitam Semangat Pagi", 5000]);
+    }
+    
+    var rows = sheet.getDataRange().getValues();
+    var menuList = [];
+    
+    for (var i = 1; i < rows.length; i++) {
+      if (rows[i][0]) {
+        menuList.push({
+          nama: rows[i][0],
+          harga: Number(rows[i][1]) || 0
+        });
+      }
+    }
+    return menuList.length > 0 ? menuList : getDefaultMenus();
+  } catch (err) {
+    return getDefaultMenus();
+  }
+}
+
+function getDefaultMenus() {
+  return [
+    {nama: "Nasi Goreng Spesial HaaNSiRO", harga: 15000},
+    {nama: "Lontong Sayur SakMbledos", harga: 12000},
+    {nama: "Es Teh Manis Mantap", harga: 4000},
+    {nama: "Kopi Hitam Semangat Pagi", harga: 5000}
+  ];
+}
+
+function getLogLaporan() {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var logSheet = ss.getSheetByName("Log Laporan");
+    
+    if (!logSheet) return [];
+    
+    var rows = logSheet.getDataRange().getValues();
+    if (rows.length <= 1) return [];
+    
+    var logData = [];
+    // Read from bottom (newest) to top (oldest)
+    for (var i = rows.length - 1; i >= 1; i--) {
+      if (rows[i][1]) { // Ensure name column is not empty
+        
+        var timestampStr = "";
+        try {
+            if (rows[i][0]) timestampStr = new Date(rows[i][0]).toLocaleString('id-ID');
+        } catch(e) {
+            timestampStr = String(rows[i][0]);
+        }
+
+        var nama = rows[i][1];
+        var waktuStr = rows[i][2];
+        var pesanan = rows[i][3];
+        var totalHarga = rows[i][4];
+        var pembayaran = rows[i][5];
+        var fotoUrl = rows[i][6];
+        
+        var waMessage = `*Laporan Pengambilan Sarapan & Barang* 🍱\n\n` +
+                          `👤 *Nama :* ${nama}\n` +
+                          `🕒 *Waktu :* ${waktuStr}\n\n` +
+                          `🍽️ *Menu Dipesan:*\n${pesanan}\n` +
+                          `💰 *Total Harga :* ${totalHarga}\n` +
+                          `💳 *Pembayaran :* ${pembayaran}\n\n` +
+                          (fotoUrl && fotoUrl !== "Tanpa Foto" ? `📷 *Bukti Foto:* ${fotoUrl}\n\n` : ``) +
+                          `_Tim HaaNSiRO SakMbledosee_ 🚀`;
+                          
+        logData.push({
+          timestamp: timestampStr,
+          nama: nama,
+          waktuStr: waktuStr,
+          pesanan: pesanan,
+          totalHarga: totalHarga,
+          pembayaran: pembayaran,
+          waMessage: waMessage
+        });
+      }
+    }
+    return logData;
+  } catch (err) {
+    return [];
+  }
+}
+
+function saveData(data) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var fileUrl = "Tanpa Foto";
+    
+    // Save image attachment to Google Drive
+    if (data.fotoBase64 && data.fotoMimeType) {
+      try {
+        var folders = DriveApp.getFoldersByName("Bukti Sarapan HaaNSiRO");
+        var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder("Bukti Sarapan HaaNSiRO");
+        
+        var decodedBytes = Utilities.base64Decode(data.fotoBase64);
+        var ext = data.fotoMimeType.includes("png") ? ".png" : ".jpg";
+        var blob = Utilities.newBlob(decodedBytes, data.fotoMimeType, "Bukti_" + (data.nama || "User").replace(/\s+/g, '_') + "_" + new Date().getTime() + ext);
+        var file = folder.createFile(blob);
+        fileUrl = file.getUrl();
+      } catch (driveErr) {
+        fileUrl = "Gagal Simpan Foto ke Drive: " + driveErr.toString();
+      }
+    }
+    
+    // Auto-create Log Laporan sheet with headers if missing
+    var logSheet = ss.getSheetByName("Log Laporan");
+    if (!logSheet) {
+      logSheet = ss.insertSheet("Log Laporan");
+      logSheet.appendRow(["Timestamp", "Nama Pengambil", "Waktu Laporan", "Menu Pesanan", "Total Harga", "Pembayaran", "Link Foto Bukti"]);
+      logSheet.getRange(1, 1, 1, 7).setFontWeight("bold").setBackground("#cfe2f3");
+    } else {
+      if (logSheet.getLastRow() === 0) {
+        logSheet.appendRow(["Timestamp", "Nama Pengambil", "Waktu Laporan", "Menu Pesanan", "Total Harga", "Pembayaran", "Link Foto Bukti"]);
+        logSheet.getRange(1, 1, 1, 7).setFontWeight("bold").setBackground("#cfe2f3");
+      }
+    }
+    
+    var timestamp = new Date();
+    // Append new row automatically with proper columns
+    logSheet.appendRow([
+      timestamp,
+      data.nama,
+      data.waktuStr,
+      data.pesanan,
+      data.totalHarga,
+      data.pembayaran,
+      fileUrl
+    ]);
+    
+    return { status: "success", message: "Data berhasil disinkronkan ke Google Sheet!", fileUrl: fileUrl };
+  } catch (error) {
+    return { status: "error", message: error.toString() };
+  }
+}

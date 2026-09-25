@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laporan Pengambilan Sarapan & Barang - HaaNSiRO</title>
+    <!-- Tailwind CSS for modern responsive layout -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #f3f4f6; 
+        }
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #2563eb;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(360deg); } 
+        }
+    </style>
+</head>
+<body class="text-gray-800 pb-12">
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-4 right-4 transform transition-all duration-300 translate-x-full z-50 rounded-xl shadow-xl px-6 py-3.5 text-white font-medium flex items-center space-x-2"></div>
+
+    <div class="max-w-3xl mx-auto p-4 md:p-6 lg:p-8 mt-2">
+        
+        <div class="bg-white rounded-t-2xl shadow-sm border-b p-6 text-center">
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">Good Morning Team HaaNSiRO Selamat Sarapan SakMbledosee</h1>
+            <p class="text-gray-500 mt-1.5 text-xs md:text-sm font-semibold tracking-wide">PoweredBy : Haansiropati@gmail.com</p>
+            
+            <!-- Navigation Tabs (Only Input Laporan & Rekap List Crew) -->
+            <div class="flex justify-center space-x-2 md:space-x-4 mt-6 border-b">
+                <button type="button" onclick="switchTab('input')" id="tab-input" class="pb-3 px-4 font-semibold text-blue-600 border-b-2 border-blue-600 transition-all cursor-pointer flex items-center space-x-2 text-sm md:text-base">
+                    <span>📝 Input Laporan Baru</span>
+                </button>
+                <button type="button" onclick="switchTab('history')" id="tab-history" class="pb-3 px-4 font-semibold text-gray-500 hover:text-gray-700 transition-all cursor-pointer flex items-center space-x-2 text-sm md:text-base">
+                    <span>📋 Rekap List Crew (Riwayat)</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-b-2xl shadow-sm p-5 md:p-8">
+            
+            <div id="view-input" class="space-y-6">
+                <form id="appForm" class="space-y-6">
+                    
+                    <!-- 1. Nama Pengambil -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1.5">1. Nama Pengambil <span class="text-red-500">*</span></label>
+                        <input type="text" id="nama" required class="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" placeholder="Masukkan nama lengkap kru">
+                    </div>
+
+                    <!-- 2. Waktu Pengambilan -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1.5">2. Waktu Pengambilan (Jam, Tanggal, Bulan, Tahun) <span class="text-red-500">*</span></label>
+                        <input type="datetime-local" id="waktu" required class="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                        <p class="text-xs text-gray-500 mt-1 italic">*Jam dan Tanggal otomatis terisi saat dibuka.</p>
+                    </div>
+
+                    <!-- 3. Menu Makanan / Minuman -->
+                    <div>
+                        <div class="flex justify-between items-end mb-2">
+                            <label class="block text-sm font-semibold text-gray-700">3. Menu Makanan / Minuman, Qty & Harga</label>
+                            <span class="text-xs text-gray-500 italic hidden md:inline-block">Baris baru otomatis muncul setelah menu dipilih</span>
+                        </div>
+                        
+                        <div id="menu-container" class="space-y-3">
+                            <!-- Dynamic menu rows injected via JS -->
+                        </div>
+
+                        <!-- 4. Total Display -->
+                        <div class="mt-4 flex justify-between items-center p-4 bg-blue-50/80 rounded-xl border border-blue-100">
+                            <span class="font-semibold text-gray-700 text-sm md:text-base">4. Total Harga Keseluruhan:</span>
+                            <span class="text-xl md:text-2xl font-bold text-blue-700 tracking-tight" id="display-total">Rp 0</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1.5">5. Ket / Pembayaran <span class="text-red-500">*</span></label>
+                            <select id="pembayaran" required class="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                                <option value="" disabled selected>Pilih Metode Pembayaran</option>
+                                <option value="1. Via Cash">1. Via Cash</option>
+                                <option value="2. Potong Gaji Bulanan">2. Potong Gaji Bulanan</option>
+                                <option value="3. Transfer">3. Transfer</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1.5">6. Unggah Bukti Foto (Opsional)</label>
+                            <input type="file" id="foto" accept="image/*" class="w-full px-3 py-2 border border-gray-300 rounded-xl file:mr-4 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
+                        </div>
+                    </div>
+
+                    <div class="pt-4 border-t">
+                        <button type="submit" id="submit-btn" class="w-full bg-[#25D366] hover:bg-[#1ebe5d] active:scale-[0.99] text-white font-bold py-4 rounded-xl shadow-lg transition-all duration-200 flex justify-center items-center space-x-2 cursor-pointer">
+                            <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564c.173.087.289.129.332.202.043.073.043.423-.101.827z"></path></svg>
+                            <span>7. Simpan & Kirim Laporan via WhatsApp</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div id="view-history" class="hidden space-y-4">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3 border-b">
+                    <div>
+                        <h2 class="text-lg font-bold text-gray-800">Daftar Rekap Pengambilan Crew</h2>
+                        <p class="text-xs text-gray-500">Tersinkronisasi langsung dengan Spreadsheet "Log Laporan"</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span id="sync-status" class="text-xs font-semibold"></span>
+                        <button type="button" onclick="loadHistory(true)" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs md:text-sm font-semibold transition cursor-pointer flex items-center space-x-1.5 shadow-sm">
+                            <span>🔄 Sinkronkan / Muat Ulang</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="history-container" class="space-y-3">
+                    <!-- History log cards injected dynamically -->
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        let availableMenu = [
+            {nama: "Nasi Goreng Spesial HaaNSiRO", harga: 15000},
+            {nama: "Lontong Sayur SakMbledos", harga: 12000},
+            {nama: "Es Teh Manis Mantap", harga: 4000},
+            {nama: "Kopi Hitam Semangat Pagi", harga: 5000}
+        ];
+
+        let memoryHistory = [];
+
+        function getStoredHistory() {
+            try {
+                const stored = localStorage.getItem('haansiro_history');
+                return stored ? JSON.parse(stored) : memoryHistory;
+            } catch (e) {
+                return memoryHistory;
+            }
+        }
+
+        function saveStoredHistory(data) {
+            memoryHistory = data;
+            try {
+                localStorage.setItem('haansiro_history', JSON.stringify(data));
+            } catch (e) {
+                // Safe fallback to memory array
+            }
+        }
+
+        function initApp() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            
+            const waktuElem = document.getElementById('waktu');
+            if (waktuElem && !waktuElem.value) {
+                waktuElem.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+            }
+
+            // Fetch menu data from Google Sheets backend
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                google.script.run
+                    .withSuccessHandler(function(data) {
+                        if (data && data.length > 0) {
+                            availableMenu = data;
+                        }
+                        initMenuRow();
+                    })
+                    .withFailureHandler(function() {
+                        initMenuRow();
+                    })
+                    .getMenuData();
+            } else {
+                initMenuRow();
+            }
+
+            loadHistory(false);
+        }
+
+        document.addEventListener('DOMContentLoaded', initApp);
+
+        function switchTab(tab) {
+            const btnInput = document.getElementById('tab-input');
+            const btnHistory = document.getElementById('tab-history');
+            const viewInput = document.getElementById('view-input');
+            const viewHistory = document.getElementById('view-history');
+
+            if (!btnInput || !btnHistory || !viewInput || !viewHistory) return;
+
+            if (tab === 'input') {
+                btnInput.className = "pb-3 px-4 font-semibold text-blue-600 border-b-2 border-blue-600 transition-all cursor-pointer flex items-center space-x-2 text-sm md:text-base";
+                btnHistory.className = "pb-3 px-4 font-semibold text-gray-500 hover:text-gray-700 transition-all cursor-pointer flex items-center space-x-2 text-sm md:text-base";
+                viewInput.classList.remove('hidden');
+                viewHistory.classList.add('hidden');
+            } else {
+                btnHistory.className = "pb-3 px-4 font-semibold text-blue-600 border-b-2 border-blue-600 transition-all cursor-pointer flex items-center space-x-2 text-sm md:text-base";
+                btnInput.className = "pb-3 px-4 font-semibold text-gray-500 hover:text-gray-700 transition-all cursor-pointer flex items-center space-x-2 text-sm md:text-base";
+                viewHistory.classList.remove('hidden');
+                viewInput.classList.add('hidden');
+                loadHistory(true);
+            }
+        }
+
+        function initMenuRow() {
+            const container = document.getElementById('menu-container');
+            if (container) {
+                container.innerHTML = '';
+                addMenuRow();
+            }
+        }
+
+        function addMenuRow() {
+            const container = document.getElementById('menu-container');
+            if (!container) return;
+            
+            let optionsHtml = '<option value="" disabled selected>Pilih Menu Makanan / Minuman...</option>';
+            availableMenu.forEach((menu, index) => {
+                optionsHtml += `<option value="${index}">${menu.nama} (Rp ${menu.harga.toLocaleString('id-ID')})</option>`;
+            });
+
+            const newRow = document.createElement('div');
+            newRow.className = 'menu-row flex flex-col md:flex-row gap-3 bg-gray-50 p-3.5 rounded-xl border border-gray-200';
+            newRow.innerHTML = `
+                <div class="flex-grow">
+                    <select class="menu-select w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white" onchange="updatePrice(this)">
+                        ${optionsHtml}
+                    </select>
+                    <input type="hidden" class="menu-nama">
+                </div>
+                <div class="w-full md:w-28">
+                    <input type="number" min="1" value="1" class="menu-qty w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white" placeholder="Qty" oninput="calculateTotal()">
+                </div>
+                <div class="w-full md:w-44 relative">
+                    <span class="absolute left-3.5 top-2.5 text-gray-500 text-sm font-medium">Rp</span>
+                    <input type="number" readonly class="menu-harga w-full pl-10 pr-3.5 py-2.5 border border-gray-300 bg-gray-100 cursor-not-allowed rounded-lg text-sm outline-none font-semibold text-gray-700" placeholder="Otomatis">
+                </div>
+                <button type="button" class="w-full md:w-auto px-3.5 py-2.5 text-red-500 bg-red-50 hover:bg-red-100 rounded-lg text-xs font-semibold hidden remove-btn cursor-pointer transition" onclick="removeMenuRow(this)">Hapus</button>
+            `;
+            container.appendChild(newRow);
+            toggleDeleteButtons();
+        }
+
+        function updatePrice(selectElem) {
+            const row = selectElem.closest('.menu-row');
+            const selectedIndex = selectElem.value;
+            const priceInput = row.querySelector('.menu-harga');
+            const nameInput = row.querySelector('.menu-nama');
+            const container = document.getElementById('menu-container');
+            
+            if (selectedIndex !== "") {
+                const selectedMenu = availableMenu[selectedIndex];
+                priceInput.value = selectedMenu.harga;
+                nameInput.value = selectedMenu.nama;
+                
+                if (row === container.lastElementChild) {
+                    addMenuRow();
+                }
+            } else {
+                priceInput.value = "";
+                nameInput.value = "";
+            }
+            calculateTotal();
+        }
+
+        function removeMenuRow(btn) {
+            const row = btn.closest('.menu-row');
+            row.remove();
+            calculateTotal();
+            
+            const container = document.getElementById('menu-container');
+            if (!container.children.length || (container.lastElementChild && container.lastElementChild.querySelector('.menu-select').value !== "")) {
+                addMenuRow();
+            }
+            toggleDeleteButtons();
+        }
+
+        function toggleDeleteButtons() {
+            const rows = document.querySelectorAll('.menu-row');
+            const btns = document.querySelectorAll('.remove-btn');
+            if (rows.length === 1 && rows[0].querySelector('.menu-select').value === "") {
+                btns[0].classList.add('hidden');
+            } else {
+                btns.forEach(btn => btn.classList.remove('hidden'));
+            }
+        }
+
+        function calculateTotal() {
+            let total = 0;
+            const rows = document.querySelectorAll('.menu-row');
+            rows.forEach(row => {
+                const qty = parseFloat(row.querySelector('.menu-qty').value) || 0;
+                const harga = parseFloat(row.querySelector('.menu-harga').value) || 0;
+                total += (qty * harga);
+            });
+            const totalElem = document.getElementById('display-total');
+            if (totalElem) {
+                totalElem.innerText = 'Rp ' + total.toLocaleString('id-ID');
+            }
+            return total;
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            if (!toast) return;
+            toast.innerText = message;
+            if (type === 'success') {
+                toast.className = 'fixed top-4 right-4 z-50 rounded-xl shadow-xl px-6 py-3.5 text-white font-medium bg-emerald-600 transition-all duration-300 translate-x-0';
+            } else {
+                toast.className = 'fixed top-4 right-4 z-50 rounded-xl shadow-xl px-6 py-3.5 text-white font-medium bg-blue-600 transition-all duration-300 translate-x-0';
+            }
+            setTimeout(() => { 
+                toast.classList.add('translate-x-full'); 
+            }, 3500);
+        }
+
+        function formatWaktuLengkap(datetimeValue) {
+            if (!datetimeValue) return "";
+            const hariArr = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+            const dateObj = new Date(datetimeValue);
+            return `${hariArr[dateObj.getDay()]}, ${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')} ## ${String(dateObj.getDate()).padStart(2, '0')}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${dateObj.getFullYear()}`;
+        }
+
+        document.getElementById('appForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const form = this;
+            const btn = document.getElementById('submit-btn');
+            const originalBtnHtml = btn.innerHTML;
+            
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            btn.innerHTML = `<div class="loader mr-2 border-white border-t-transparent"></div> <span>Menyimpan ke Spreadsheet...</span>`;
+            btn.disabled = true;
+
+            const nama = document.getElementById('nama').value;
+            const waktuFormatStr = formatWaktuLengkap(document.getElementById('waktu').value);
+            const pembayaran = document.getElementById('pembayaran').value;
+            const totalHargaNum = calculateTotal();
+            const totalHargaStr = 'Rp ' + totalHargaNum.toLocaleString('id-ID');
+            const fileInput = document.getElementById('foto');
+
+            let menuWA = "";
+            let menuSheetStr = "";
+            let validItemCount = 0;
+            
+            document.querySelectorAll('.menu-row').forEach((row) => {
+                let namaMenu = row.querySelector('.menu-nama').value.trim();
+                if (!namaMenu) return;
+                validItemCount++;
+                let qty = row.querySelector('.menu-qty').value || 1;
+                let harga = parseFloat(row.querySelector('.menu-harga').value) || 0;
+                menuWA += `${validItemCount}. ${namaMenu} (x${qty}) = Rp ${(harga * qty).toLocaleString('id-ID')}\n`;
+                menuSheetStr += `${namaMenu} (${qty}x), `;
+            });
+
+            if (validItemCount === 0) {
+                menuWA = "- Tidak ada pesanan menu -\n";
+                menuSheetStr = "Tanpa Pesanan Menu";
+            }
+
+            let waMessage = `*Laporan Pengambilan Sarapan & Barang* 🍱\n\n` +
+                              `👤 *Nama :* ${nama}\n` +
+                              `🕒 *Waktu :* ${waktuFormatStr}\n\n` +
+                              `🍽️ *Menu Dipesan:*\n${menuWA}\n` +
+                              `💰 *Total Harga :* ${totalHargaStr}\n` +
+                              `💳 *Pembayaran :* ${pembayaran}\n\n` +
+                              `_Tim HaaNSiRO SakMbledosee_ 🚀`;
+
+            const finalizeSave = (fotoInfo = "Tanpa Foto") => {
+                if (fotoInfo !== "Tanpa Foto" && fotoInfo !== "Terlampir" && !fotoInfo.includes("Gagal")) {
+                    waMessage += `\n📷 *Bukti Foto:* ${fotoInfo}`;
+                }
+
+                const record = {
+                    timestamp: new Date().toLocaleString('id-ID'),
+                    nama: nama,
+                    waktuStr: waktuFormatStr,
+                    pesanan: menuSheetStr,
+                    totalHarga: totalHargaStr,
+                    pembayaran: pembayaran,
+                    waMessage: waMessage
+                };
+
+                let history = getStoredHistory();
+                history.unshift(record);
+                saveStoredHistory(history);
+
+                btn.innerHTML = originalBtnHtml;
+                btn.disabled = false;
+                showToast("Berhasil tersimpan dan siap dibagikan!", "success");
+                window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(waMessage)}`, '_blank');
+                form.reset();
+                initApp();
+            };
+
+            if (fileInput && fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const dataUrl = event.target.result;
+                    const base64Data = dataUrl.split(',')[1];
+                    const mimeType = dataUrl.split(';')[0].split(':')[1];
+
+                    if (typeof google !== 'undefined' && google.script && google.script.run) {
+                        google.script.run
+                            .withSuccessHandler(function(resp) {
+                                finalizeSave(resp.fileUrl || "Terlampir");
+                            })
+                            .withFailureHandler(function() {
+                                finalizeSave("Terlampir Lokal");
+                            })
+                            .saveData({
+                                nama: nama,
+                                waktuStr: waktuFormatStr,
+                                pesanan: menuSheetStr,
+                                totalHarga: totalHargaStr,
+                                pembayaran: pembayaran,
+                                fotoBase64: base64Data,
+                                fotoMimeType: mimeType
+                            });
+                    } else {
+                        setTimeout(() => finalizeSave("Terlampir (Demo Mode)"), 400);
+                    }
+                };
+                reader.readAsDataURL(file);
+            } else {
+                if (typeof google !== 'undefined' && google.script && google.script.run) {
+                    google.script.run
+                        .withSuccessHandler(function(resp) {
+                            finalizeSave("Tanpa Foto");
+                        })
+                        .withFailureHandler(function() {
+                            finalizeSave("Tanpa Foto");
+                        })
+                        .saveData({
+                            nama: nama,
+                            waktuStr: waktuFormatStr,
+                            pesanan: menuSheetStr,
+                            totalHarga: totalHargaStr,
+                            pembayaran: pembayaran
+                        });
+                } else {
+                    setTimeout(() => finalizeSave("Tanpa Foto"), 400);
+                }
+            }
+        });
+
+        function loadHistory(showSyncing = false) {
+            const container = document.getElementById('history-container');
+            const syncStatus = document.getElementById('sync-status');
+            if (!container) return;
+
+            if (showSyncing && syncStatus) {
+                syncStatus.innerHTML = '<span class="text-blue-500 animate-pulse">Menyinkronkan...</span>';
+            }
+
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                google.script.run
+                    .withSuccessHandler(function(serverHistory) {
+                        if (syncStatus) {
+                            syncStatus.innerHTML = '<span class="text-emerald-600">✓ Tersinkron</span>';
+                            setTimeout(() => { syncStatus.innerHTML = ''; }, 3000);
+                        }
+                        // OVERWRITE local history with server data (if deleted in Sheet, it disappears here)
+                        saveStoredHistory(serverHistory);
+                        renderHistoryList(serverHistory);
+                    })
+                    .withFailureHandler(function() {
+                        if (syncStatus) syncStatus.innerHTML = '<span class="text-red-500">⚠ Gagal Sync</span>';
+                        renderHistoryList(getStoredHistory());
+                    })
+                    .getLogLaporan();
+            } else {
+                renderHistoryList(getStoredHistory());
+            }
+        }
+
+        function renderHistoryList(history) {
+            const container = document.getElementById('history-container');
+            if (!container) return;
+
+            if (!history || history.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center p-8 bg-gray-50 rounded-2xl border border-dashed border-gray-300">
+                        <p class="text-gray-500 font-medium text-sm">Belum ada riwayat pengambilan sarapan.</p>
+                        <p class="text-xs text-gray-400 mt-1">Input laporan baru untuk mencatat daftar kru.</p>
+                    </div>`;
+                return;
+            }
+
+            let html = '';
+            history.forEach((item, index) => {
+                html += `
+                    <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-3 hover:border-blue-200 transition">
+                        <div class="flex justify-between items-start gap-2">
+                            <div>
+                                <span class="font-bold text-gray-900 text-base">${item.nama}</span>
+                                <p class="text-xs text-gray-500 mt-0.5">🕒 ${item.waktuStr}</p>
+                            </div>
+                            <span class="text-sm font-bold text-blue-700 bg-blue-100/80 px-3 py-1 rounded-lg border border-blue-200">
+                                ${item.totalHarga}
+                            </span>
+                        </div>
+                        <div class="text-xs text-gray-700 bg-white p-2.5 rounded-lg border border-gray-200 font-medium">
+                            <span class="text-gray-500">Menu Dipesan:</span> ${item.pesanan}
+                        </div>
+                        <div class="flex justify-between items-center pt-1">
+                            <span class="text-xs font-semibold text-gray-600 bg-gray-200/60 px-2.5 py-1 rounded-md">💳 ${item.pembayaran}</span>
+                            <!-- NO DELETE BUTTON FOR CREW, ONLY SHARE WA -->
+                            <button type="button" onclick="shareWhatsAppByIndex(${index})" class="bg-[#25D366] hover:bg-[#1ebe5d] active:scale-95 text-white text-xs font-bold px-3.5 py-2 rounded-lg flex items-center space-x-1.5 shadow-sm cursor-pointer transition">
+                                <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564c.173.087.289.129.332.202.043.073.043.423-.101.827z"></path></svg>
+                                <span>Share WA</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function shareWhatsAppByIndex(index) {
+            const history = getStoredHistory();
+            if (history[index] && history[index].waMessage) {
+                window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(history[index].waMessage)}`, '_blank');
+            } else {
+                showToast("Data riwayat tidak ditemukan.", "error");
+            }
+        }
+    </script>
+</body>
+</html>
